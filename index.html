@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ms" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1F6AA5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Hijri Age Calc" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <title>Kalkulator Umur & Mukallaf (Masihi & Hijrah Malaysia)</title>
+  <style>
+    :root {
+      --primary: #1F6AA5;
+      --primary-hover: #144870;
+      --secondary: #374151;
+      --secondary-hover: #4B5563;
+      --accent: #3B8ED0;
+
+      --bg: #12151c;
+      --card: #1c212b;
+      --card-inner: #242b38;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --border: #323b4c;
+      --result-bg: #11151d;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --card-inner: #e9eef5;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --result-bg: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header {
+      text-align: center;
+      margin: 8px 0 14px;
+    }
+
+    .header h1 {
+      margin: 0 0 4px;
+      font-size: 21px;
+      color: var(--accent);
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .dob-row {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr 1.2fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .sub-row {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    @media (max-width: 600px) {
+      .sub-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--card-inner);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    select:focus, input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    .seg-group {
+      display: grid;
+      grid-template-columns: repeat(var(--seg-count, 2), 1fr);
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      padding: 8px 6px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .seg-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .seg-btn.active:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 520px) {
+      .btn-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.99);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--secondary-hover);
+    }
+
+    pre#resultBox {
+      margin: 0;
+      padding: 14px;
+      border-radius: 10px;
+      background: var(--result-bg);
+      border: 1px solid var(--border);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text);
+      min-height: 260px;
+    }
+
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .status-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Tetapan -->
+    <div class="card settings-grid">
+      <div class="field-group">
+        <label id="langLbl">Bahasa:</label>
+        <div class="seg-group" style="--seg-count: 2;" id="langSeg">
+          <button type="button" class="seg-btn active" data-val="BM">BM</button>
+          <button type="button" class="seg-btn" data-val="EN">EN</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label id="modeLbl" for="modeSelect">Mod:</label>
+        <select id="modeSelect">
+          <option value="System">System</option>
+          <option value="Dark" selected>Dark</option>
+          <option value="Light">Light</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label id="colorLbl" for="colorSelect">Warna:</label>
+        <select id="colorSelect">
+          <option value="Biru / Blue">Biru / Blue</option>
+          <option value="Hijau / Green">Hijau / Green</option>
+          <option value="Ungu / Purple">Ungu / Purple</option>
+          <option value="Ambar / Amber">Ambar / Amber</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tajuk -->
+    <div class="header">
+      <h1 id="titleLbl">Kalkulator Umur Masihi & Hijrah Malaysia</h1>
+      <p id="subtitleLbl">Kiraan umur semasa, tarikh genap umur Hijrah & tempoh mukallaf</p>
+    </div>
+
+    <!-- Input -->
+    <div class="card">
+      <div class="field-group">
+        <label id="dobLbl">Tarikh Lahir (Masihi):</label>
+        <div class="dob-row">
+          <select id="daySelect"></select>
+          <select id="monthSelect"></select>
+          <input type="number" id="yearInput" value="1990" min="1" max="9999" placeholder="Tahun (cth: 1990)" />
+        </div>
+      </div>
+
+      <div class="sub-row">
+        <div class="field-group">
+          <label id="balighLbl" for="balighInput">Umur Baligh / Sasaran (Tahun Hijrah):</label>
+          <input type="number" id="balighInput" value="12" min="1" max="150" />
+        </div>
+
+        <div class="field-group">
+          <label id="offsetLbl">Pelarasan Takwim Malaysia (Hari):</label>
+          <div class="seg-group" style="--seg-count: 3;" id="offsetSeg">
+            <button type="button" class="seg-btn" data-val="-1">-1</button>
+            <button type="button" class="seg-btn active" data-val="0">0</button>
+            <button type="button" class="seg-btn" data-val="1">+1</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Butang -->
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary" id="calcBtn">Kira Sekarang</button>
+      <button type="button" class="btn btn-secondary" id="copyBtn">Salin Hasil</button>
+    </div>
+
+    <!-- Keputusan -->
+    <div class="card" style="padding: 10px;">
+      <pre id="resultBox"></pre>
+    </div>
+
+    <div class="footer-bar">
+      <span id="pwaNote">Menu (⋮) → "Install app" / "Add to Home screen"</span>
+      <span class="status-pill" id="offlineBadge">Offline Ready</span>
+    </div>
+  </div>
+
+  <script>
+    const BULAN_HIJRI_BM = [
+      "Muharam", "Safar", "Rabiulawal", "Rabiulakhir",
+      "Jamadilawal", "Jamadilakhir", "Rejab", "Syaaban",
+      "Ramadan", "Syawal", "Zulkaedah", "Zulhijah"
+    ];
+
+    const BULAN_HIJRI_EN = [
+      "Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Thani",
+      "Jumada al-Ula", "Jumada al-Thani", "Rajab", "Sha'ban",
+      "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
+    ];
+
+    const BULAN_MASIHI_BM = [
+      "Januari", "Februari", "Mac", "April", "Mei", "Jun",
+      "Julai", "Ogos", "September", "Oktober", "November", "Disember"
+    ];
+
+    const BULAN_MASIHI_EN = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    const COLOR_THEMES = {
+      "Biru / Blue": {
+        primary: "#1F6AA5",
+        primaryHover: "#144870",
+        secondary: "#374151",
+        secondaryHover: "#4B5563",
+        accent: "#3B8ED0"
+      },
+      "Hijau / Green": {
+        primary: "#2FA572",
+        primaryHover: "#106A43",
+        secondary: "#334155",
+        secondaryHover: "#475569",
+        accent: "#2CC985"
+      },
+      "Ungu / Purple": {
+        primary: "#7C3AED",
+        primaryHover: "#5B21B6",
+        secondary: "#3F3F46",
+        secondaryHover: "#52525B",
+        accent: "#A78BFA"
+      },
+      "Ambar / Amber": {
+        primary: "#D97706",
+        primaryHover: "#B45309",
+        secondary: "#374151",
+        secondaryHover: "#4B5563",
+        accent: "#FBBF24"
+      }
+    };
+
+    const UI_TEXT = {
+      BM: {
+        windowTitle: "Kalkulator Umur & Mukallaf (Masihi & Hijrah Malaysia)",
+        title: "Kalkulator Umur Masihi & Hijrah Malaysia",
+        subtitle: "Kiraan umur semasa, tarikh genap umur Hijrah & tempoh mukallaf",
+        langLabel: "Bahasa:",
+        modeLabel: "Mod:",
+        colorLabel: "Warna:",
+        dobLabel: "Tarikh Lahir (Masihi):",
+        yearPlaceholder: "Tahun (cth: 1990)",
+        balighLabel: "Umur Baligh / Sasaran (Tahun Hijrah):",
+        offsetLabel: "Pelarasan Takwim Malaysia (Hari):",
+        calcBtn: "Kira Sekarang",
+        copyBtn: "Salin Hasil",
+        copiedBtn: "Disalin ✓",
+        errMonthDays: "RALAT: {month} {year} hanya mempunyai {max_day} hari.",
+        errInvalidInput: "RALAT: Sila pastikan tarikh lahir dan umur baligh sah.",
+        errFutureDob: "RALAT: Tarikh lahir melebihi tarikh hari ini.",
+        secCurrent: "TARIKH SEMASA",
+        secDob: "TARIKH LAHIR",
+        secAge: "UMUR SEMASA",
+        secTarget: "GENAP {age} TAHUN HIJRAH (BALIGH / MUKALLAF)",
+        gregorian: "Masihi",
+        hijri: "Hijrah",
+        offsetNote: "Pelarasan: {offset} hari",
+        targetHijri: "Tarikh Hijrah",
+        targetGregorian: "Tarikh Masihi",
+        mukallafHijri: "Tempoh Mukallaf (Hijrah)",
+        mukallafGregorian: "Tempoh Mukallaf (Masihi)",
+        daysUnit: "hari",
+        yearsUnit: "tahun",
+        monthsUnit: "bulan",
+        notReached: "Status : Belum genap {age} tahun Hijrah (baki {days} hari lagi).",
+        pwaNote: "Menu (⋮) → \"Install app\" / \"Add to Home screen\"",
+        offlineBadge: "Sedia Luar Talian"
+      },
+      EN: {
+        windowTitle: "Age & Mukallaf Calculator (Gregorian & Malaysia Hijri)",
+        title: "Gregorian & Malaysia Hijri Age Calculator",
+        subtitle: "Current age, target Hijri milestone date & mukallaf duration",
+        langLabel: "Language:",
+        modeLabel: "Mode:",
+        colorLabel: "Color:",
+        dobLabel: "Date of Birth (Gregorian):",
+        yearPlaceholder: "Year (e.g. 1990)",
+        balighLabel: "Baligh (Puberty) / Target Age (Hijri Years):",
+        offsetLabel: "Malaysia Calendar Offset (Days):",
+        calcBtn: "Calculate Now",
+        copyBtn: "Copy Result",
+        copiedBtn: "Copied ✓",
+        errMonthDays: "ERROR: {month} {year} only has {max_day} days.",
+        errInvalidInput: "ERROR: Please enter a valid date of birth and target age.",
+        errFutureDob: "ERROR: Date of birth cannot be in the future.",
+        secCurrent: "CURRENT DATE",
+        secDob: "DATE OF BIRTH",
+        secAge: "CURRENT AGE",
+        secTarget: "REACHING {age} HIJRI YEARS (BALIGH / MUKALLAF)",
+        gregorian: "Gregorian",
+        hijri: "Hijri",
+        offsetNote: "Offset: {offset} days",
+        targetHijri: "Hijri Date",
+        targetGregorian: "Gregorian Date",
+        mukallafHijri: "Mukallaf Duration (Hijri)",
+        mukallafGregorian: "Mukallaf Duration (Gregorian)",
+        daysUnit: "days",
+        yearsUnit: "years",
+        monthsUnit: "months",
+        notReached: "Status : Has not reached {age} Hijri years ({days} days remaining).",
+        pwaNote: "Menu (⋮) → \"Install app\" / \"Add to Home screen\"",
+        offlineBadge: "Offline Ready"
+      }
+    };
+
+    const MS_PER_DAY = 86400000;
+
+    function addDaysUTC(dateObj, days) {
+      return new Date(dateObj.getTime() + days * MS_PER_DAY);
+    }
+
+    function diffDaysUTC(a, b) {
+      return Math.round((a.getTime() - b.getTime()) / MS_PER_DAY);
+    }
+
+    function gregorianToHijriObj(utcDate) {
+      let d = utcDate.getUTCDate();
+      let m = utcDate.getUTCMonth() + 1;
+      let y = utcDate.getUTCFullYear();
+
+      let jd;
+      if (y > 1582 || (y === 1582 && m > 10) || (y === 1582 && m === 10 && d > 14)) {
+        jd = Math.floor((1461 * (y + 4800 + Math.floor((m - 14) / 12))) / 4) +
+             Math.floor((367 * (m - 2 - 12 * Math.floor((m - 14) / 12))) / 12) -
+             Math.floor((3 * Math.floor((y + 4900 + Math.floor((m - 14) / 12)) / 100)) / 4) +
+             d - 32075;
+      } else {
+        jd = 367 * y -
+             Math.floor((7 * (y + 5001 + Math.floor((m - 9) / 7))) / 4) +
+             Math.floor((275 * m) / 9) +
+             d + 1729777;
+      }
+
+      const l = jd - 1948440 + 10632;
+      const n = Math.floor((l - 1) / 10631);
+      const lRem = l - 10631 * n + 354;
+      const j = Math.floor((10985 - lRem) / 5316) *
+                Math.floor((50 * lRem) / 17719) +
+                Math.floor(lRem / 5670) *
+                Math.floor((43 * lRem) / 15238);
+      const lFinal = lRem -
+                     Math.floor((30 - j) / 15) *
+                     Math.floor((17719 * j) / 50) -
+                     Math.floor(j / 16) *
+                     Math.floor((15238 * j) / 43) +
+                     29;
+      const hMonth = Math.floor((24 * lFinal) / 709);
+      const hDay = lFinal - Math.floor((709 * hMonth) / 24);
+      const hYear = 30 * n + j - 30;
+
+      return { year: hYear, month: hMonth, day: hDay };
+    }
+
+    function hijriToGregorianUTC(hYear, hMonth, hDay) {
+      const jd = Math.floor((11 * hYear + 3) / 30) +
+                 354 * hYear +
+                 30 * hMonth -
+                 Math.floor((hMonth - 1) / 2) +
+                 hDay +
+                 1948440 -
+                 385;
+
+      let l = jd + 68569;
+      const n = Math.floor((4 * l) / 146097);
+      l = l - Math.floor((146097 * n + 3) / 4);
+      const i = Math.floor((4000 * (l + 1)) / 1461001);
+      l = l - Math.floor((1461 * i) / 4) + 31;
+      const j = Math.floor((80 * l) / 2447);
+      const day = l - Math.floor((2447 * j) / 80);
+      l = Math.floor(j / 11);
+      const month = j + 2 - 12 * l;
+      const year = 100 * (n - 49) + i + l;
+
+      return new Date(Date.UTC(year, month - 1, day));
+    }
+
+    function hijriMonthLength(hYear, hMonth) {
+      const start = hijriToGregorianUTC(hYear, hMonth, 1);
+      const nextMonth = hMonth === 12 ? 1 : hMonth + 1;
+      const nextYear = hMonth === 12 ? hYear + 1 : hYear;
+      const nextStart = hijriToGregorianUTC(nextYear, nextMonth, 1);
+      return diffDaysUTC(nextStart, start);
+    }
+
+    function gregorianToHijriMY(utcDate, offsetDays) {
+      const adj = addDaysUTC(utcDate, offsetDays);
+      return gregorianToHijriObj(adj);
+    }
+
+    function hijriToGregorianMY(hYear, hMonth, hDay, offsetDays) {
+      const base = hijriToGregorianUTC(hYear, hMonth, hDay);
+      return addDaysUTC(base, -offsetDays);
+    }
+
+    function daysInGregorianMonth(year, month) {
+      return new Date(Date.UTC(year, month, 0)).getUTCDate();
+    }
+
+    function diffYmdGregorian(startUTC, endUTC) {
+      if (endUTC < startUTC) return [0, 0, 0];
+      let years = endUTC.getUTCFullYear() - startUTC.getUTCFullYear();
+      let months = endUTC.getUTCMonth() - startUTC.getUTCMonth();
+      let days = endUTC.getUTCDate() - startUTC.getUTCDate();
+
+      if (days < 0) {
+        months -= 1;
+        const prevMonth = endUTC.getUTCMonth() === 0 ? 12 : endUTC.getUTCMonth();
+        const prevYear = endUTC.getUTCMonth() === 0 ? endUTC.getUTCFullYear() - 1 : endUTC.getUTCFullYear();
+        days += daysInGregorianMonth(prevYear, prevMonth);
+      }
+
+      if (months < 0) {
+        years -= 1;
+        months += 12;
+      }
+
+      return [years, months, days];
+    }
+
+    function compareHijri(a, b) {
+      if (a.year !== b.year) return a.year - b.year;
+      if (a.month !== b.month) return a.month - b.month;
+      return a.day - b.day;
+    }
+
+    function diffYmdHijri(startH, endH) {
+      if (compareHijri(endH, startH) < 0) return [0, 0, 0];
+      let years = endH.year - startH.year;
+      let months = endH.month - startH.month;
+      let days = endH.day - startH.day;
+
+      if (days < 0) {
+        months -= 1;
+        const prevM = endH.month === 1 ? 12 : endH.month - 1;
+        const prevY = endH.month === 1 ? endH.year - 1 : endH.year;
+        days += hijriMonthLength(prevY, prevM);
+      }
+
+      if (months < 0) {
+        years -= 1;
+        months += 12;
+      }
+
+      return [years, months, days];
+    }
+
+    function formatMasihi(utcDate, lang) {
+      const months = lang === "BM" ? BULAN_MASIHI_BM : BULAN_MASIHI_EN;
+      return `${utcDate.getUTCDate()} ${months[utcDate.getUTCMonth()]} ${utcDate.getUTCFullYear()}`;
+    }
+
+    function formatHijri(h, lang) {
+      const months = lang === "BM" ? BULAN_HIJRI_BM : BULAN_HIJRI_EN;
+      const suffix = lang === "BM" ? "H" : " AH";
+      return `${h.day} ${months[h.month - 1]} ${h.year}${suffix}`;
+    }
+
+    function formatYmd(y, m, d, lang) {
+      const t = UI_TEXT[lang];
+      return `${y} ${t.yearsUnit}, ${m} ${t.monthsUnit}, ${d} ${t.daysUnit}`;
+    }
+
+    let currentLang = "BM";
+    let currentOffset = 0;
+    let copyTimer = null;
+
+    const daySelect = document.getElementById("daySelect");
+    const monthSelect = document.getElementById("monthSelect");
+    const yearInput = document.getElementById("yearInput");
+    const balighInput = document.getElementById("balighInput");
+    const modeSelect = document.getElementById("modeSelect");
+    const colorSelect = document.getElementById("colorSelect");
+    const resultBox = document.getElementById("resultBox");
+    const calcBtn = document.getElementById("calcBtn");
+    const copyBtn = document.getElementById("copyBtn");
+
+    for (let i = 1; i <= 31; i++) {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = String(i);
+      if (i === 26) opt.selected = true;
+      daySelect.appendChild(opt);
+    }
+
+    function populateMonths(lang, selectedIndex = 9) {
+      const list = lang === "BM" ? BULAN_MASIHI_BM : BULAN_MASIHI_EN;
+      monthSelect.innerHTML = "";
+      list.forEach((name, idx) => {
+        const opt = document.createElement("option");
+        opt.value = String(idx);
+        opt.textContent = name;
+        if (idx === selectedIndex) opt.selected = true;
+        monthSelect.appendChild(opt);
+      });
+    }
+
+    function resolveThemeMode(mode) {
+      if (mode === "System") {
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+          ? "light"
+          : "dark";
+      }
+      return mode.toLowerCase();
+    }
+
+    function applyThemeAndLang() {
+      const t = UI_TEXT[currentLang];
+      const palette = COLOR_THEMES[colorSelect.value] || COLOR_THEMES["Biru / Blue"];
+      const resolvedMode = resolveThemeMode(modeSelect.value);
+
+      document.documentElement.setAttribute("data-theme", resolvedMode);
+      document.documentElement.style.setProperty("--primary", palette.primary);
+      document.documentElement.style.setProperty("--primary-hover", palette.primaryHover);
+      document.documentElement.style.setProperty("--secondary", palette.secondary);
+      document.documentElement.style.setProperty("--secondary-hover", palette.secondaryHover);
+      document.documentElement.style.setProperty("--accent", palette.accent);
+
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute("content", palette.primary);
+
+      document.title = t.windowTitle;
+      document.getElementById("titleLbl").textContent = t.title;
+      document.getElementById("subtitleLbl").textContent = t.subtitle;
+      document.getElementById("langLbl").textContent = t.langLabel;
+      document.getElementById("modeLbl").textContent = t.modeLabel;
+      document.getElementById("colorLbl").textContent = t.colorLabel;
+      document.getElementById("dobLbl").textContent = t.dobLabel;
+      yearInput.placeholder = t.yearPlaceholder;
+      document.getElementById("balighLbl").textContent = t.balighLabel;
+      document.getElementById("offsetLbl").textContent = t.offsetLabel;
+      document.getElementById("pwaNote").textContent = t.pwaNote;
+      document.getElementById("offlineBadge").textContent = t.offlineBadge;
+      calcBtn.textContent = t.calcBtn;
+      if (!copyTimer) copyBtn.textContent = t.copyBtn;
+    }
+
+    function calculate() {
+      const t = UI_TEXT[currentLang];
+      const monthNames = currentLang === "BM" ? BULAN_MASIHI_BM : BULAN_MASIHI_EN;
+
+      const day = parseInt(daySelect.value, 10);
+      const monthIdx = parseInt(monthSelect.value, 10);
+      const month = monthIdx + 1;
+      const year = parseInt(yearInput.value.trim(), 10);
+      const balighAge = parseInt(balighInput.value.trim(), 10);
+      const offset = currentOffset;
+
+      if (Number.isNaN(year) || Number.isNaN(balighAge) || year < 1 || balighAge <= 0) {
+        resultBox.textContent = t.errInvalidInput;
+        return;
+      }
+
+      const maxDayM = daysInGregorianMonth(year, month);
+      if (day > maxDayM) {
+        resultBox.textContent = t.errMonthDays
+          .replace("{month}", monthNames[monthIdx])
+          .replace("{year}", year)
+          .replace("{max_day}", maxDayM);
+        return;
+      }
+
+      const dobM = new Date(Date.UTC(year, month - 1, day));
+      const nowLocal = new Date();
+      const todayM = new Date(Date.UTC(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate()));
+
+      if (dobM > todayM) {
+        resultBox.textContent = t.errFutureDob;
+        return;
+      }
+
+      const dobH = gregorianToHijriMY(dobM, offset);
+      const todayH = gregorianToHijriMY(todayM, offset);
+
+      const targetHYear = dobH.year + balighAge;
+      const maxHDay = hijriMonthLength(targetHYear, dobH.month);
+      const targetHDay = Math.min(dobH.day, maxHDay);
+      const targetH = { year: targetHYear, month: dobH.month, day: targetHDay };
+      const targetM = hijriToGregorianMY(targetH.year, targetH.month, targetH.day, offset);
+
+      const ageM = diffYmdGregorian(dobM, todayM);
+      const ageH = diffYmdHijri(dobH, todayH);
+
+      const mukallafH = diffYmdHijri(targetH, todayH);
+      const mukallafM = diffYmdGregorian(targetM, todayM);
+      const totalDaysMukallaf = Math.max(0, diffDaysUTC(todayM, targetM));
+
+      const offsetSign = offset >= 0 ? `+${offset}` : `${offset}`;
+      const offsetStr = t.offsetNote.replace("{offset}", offsetSign);
+
+      const lines = [
+        t.secCurrent,
+        `  • ${t.gregorian.padEnd(10)}: ${formatMasihi(todayM, currentLang)}`,
+        `  • ${t.hijri.padEnd(10)}: ${formatHijri(todayH, currentLang)}  (${offsetStr})`,
+        "-".repeat(62),
+        t.secDob,
+        `  • ${t.gregorian.padEnd(10)}: ${formatMasihi(dobM, currentLang)}`,
+        `  • ${t.hijri.padEnd(10)}: ${formatHijri(dobH, currentLang)}`,
+        "-".repeat(62),
+        t.secAge,
+        `  • ${t.gregorian.padEnd(10)}: ${formatYmd(ageM[0], ageM[1], ageM[2], currentLang)}`,
+        `  • ${t.hijri.padEnd(10)}: ${formatYmd(ageH[0], ageH[1], ageH[2], currentLang)}`,
+        "-".repeat(62),
+        t.secTarget.replace("{age}", balighAge),
+        `  • ${t.targetHijri.padEnd(14)}: ${formatHijri(targetH, currentLang)}`,
+        `  • ${t.targetGregorian.padEnd(14)}: ${formatMasihi(targetM, currentLang)}`
+      ];
+
+      if (compareHijri(todayH, targetH) >= 0) {
+        lines.push(`  • ${t.mukallafHijri.padEnd(32)}: ${formatYmd(mukallafH[0], mukallafH[1], mukallafH[2], currentLang)}`);
+        lines.push(
+          `  • ${t.mukallafGregorian.padEnd(32)}: ${formatYmd(mukallafM[0], mukallafM[1], mukallafM[2], currentLang)} (${totalDaysMukallaf.toLocaleString()} ${t.daysUnit})`
+        );
+      } else {
+        const bakiHari = Math.max(0, diffDaysUTC(targetM, todayM));
+        lines.push(
+          t.notReached
+            .replace("{age}", balighAge)
+            .replace("{days}", bakiHari)
+        );
+      }
+
+      resultBox.textContent = lines.join("\n");
+    }
+
+    document.querySelectorAll("#langSeg .seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const newLang = btn.dataset.val;
+        if (newLang === currentLang) return;
+        const prevIdx = parseInt(monthSelect.value, 10) || 0;
+        currentLang = newLang;
+        document.querySelectorAll("#langSeg .seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.val === currentLang);
+        });
+        populateMonths(currentLang, prevIdx);
+        applyThemeAndLang();
+        calculate();
+      });
+    });
+
+    document.querySelectorAll("#offsetSeg .seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentOffset = parseInt(btn.dataset.val, 10);
+        document.querySelectorAll("#offsetSeg .seg-btn").forEach((b) => {
+          b.classList.toggle("active", parseInt(b.dataset.val, 10) === currentOffset);
+        });
+        calculate();
+      });
+    });
+
+    modeSelect.addEventListener("change", applyThemeAndLang);
+    colorSelect.addEventListener("change", applyThemeAndLang);
+    daySelect.addEventListener("change", calculate);
+    monthSelect.addEventListener("change", calculate);
+    yearInput.addEventListener("input", calculate);
+    balighInput.addEventListener("input", calculate);
+    calcBtn.addEventListener("click", calculate);
+
+    copyBtn.addEventListener("click", async () => {
+      const text = resultBox.textContent.trim();
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      const t = UI_TEXT[currentLang];
+      copyBtn.textContent = t.copiedBtn;
+      if (copyTimer) clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => {
+        copyTimer = null;
+        copyBtn.textContent = t.copyBtn;
+      }, 1500);
+    });
+
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+        if (modeSelect.value === "System") applyThemeAndLang();
+      });
+    }
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
+
+    populateMonths("BM", 9);
+    applyThemeAndLang();
+    calculate();
+  </script>
+</body>
+</html>

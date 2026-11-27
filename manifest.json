@@ -1,0 +1,19 @@
+{
+  "name": "Kalkulator Umur & Mukallaf",
+  "short_name": "Hijri Age Calc",
+  "description": "Kalkulator umur Masihi & Hijrah Malaysia serta tempoh mukallaf",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#12151c",
+  "theme_color": "#1F6AA5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
