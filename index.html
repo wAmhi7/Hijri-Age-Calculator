@@ -226,9 +226,26 @@
       font-size: 12.5px;
       line-height: 1.5;
       white-space: pre-wrap;
-      word-break: break-word;
+      word-break: normal;
+      overflow-wrap: break-word;
       color: var(--text);
       min-height: 280px;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      .card {
+        padding: 12px;
+      }
+
+      pre#resultBox {
+        padding: 10px;
+        font-size: 11px;
+        line-height: 1.45;
+      }
     }
 
     .footer-bar {
@@ -490,65 +507,56 @@
       return Math.round((a.getTime() - b.getTime()) / MS_PER_DAY);
     }
 
+    const uqFormatter = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric"
+    });
+
     function gregorianToHijriObj(utcDate) {
-      let d = utcDate.getUTCDate();
-      let m = utcDate.getUTCMonth() + 1;
-      let y = utcDate.getUTCFullYear();
-
-      let jd;
-      if (y > 1582 || (y === 1582 && m > 10) || (y === 1582 && m === 10 && d > 14)) {
-        jd = Math.floor((1461 * (y + 4800 + Math.floor((m - 14) / 12))) / 4) +
-             Math.floor((367 * (m - 2 - 12 * Math.floor((m - 14) / 12))) / 12) -
-             Math.floor((3 * Math.floor((y + 4900 + Math.floor((m - 14) / 12)) / 100)) / 4) +
-             d - 32075;
-      } else {
-        jd = 367 * y -
-             Math.floor((7 * (y + 5001 + Math.floor((m - 9) / 7))) / 4) +
-             Math.floor((275 * m) / 9) +
-             d + 1729777;
+      const parts = uqFormatter.formatToParts(utcDate);
+      let year = 0;
+      let month = 0;
+      let day = 0;
+      for (const p of parts) {
+        if (p.type === "year") year = parseInt(p.value, 10);
+        else if (p.type === "month") month = parseInt(p.value, 10);
+        else if (p.type === "day") day = parseInt(p.value, 10);
       }
+      return { year, month, day };
+    }
 
-      const l = jd - 1948440 + 10632;
-      const n = Math.floor((l - 1) / 10631);
-      const lRem = l - 10631 * n + 354;
-      const j = Math.floor((10985 - lRem) / 5316) *
-                Math.floor((50 * lRem) / 17719) +
-                Math.floor(lRem / 5670) *
-                Math.floor((43 * lRem) / 15238);
-      const lFinal = lRem -
-                     Math.floor((30 - j) / 15) *
-                     Math.floor((17719 * j) / 50) -
-                     Math.floor(j / 16) *
-                     Math.floor((15238 * j) / 43) +
-                     29;
-      const hMonth = Math.floor((24 * lFinal) / 709);
-      const hDay = lFinal - Math.floor((709 * hMonth) / 24);
-      const hYear = 30 * n + j - 30;
-
-      return { year: hYear, month: hMonth, day: hDay };
+    function compareHijri(a, b) {
+      if (a.year !== b.year) return a.year - b.year;
+      if (a.month !== b.month) return a.month - b.month;
+      return a.day - b.day;
     }
 
     function hijriToGregorianUTC(hYear, hMonth, hDay) {
-      const jd = Math.floor((11 * hYear + 3) / 30) +
-                 354 * hYear +
-                 30 * hMonth -
-                 Math.floor((hMonth - 1) / 2) +
-                 hDay +
-                 1948440 -
-                 385;
+      const target = { year: hYear, month: hMonth, day: hDay };
+      // Approximate Gregorian date (~354.367 days/year) and search within a 5-day window
+      const approxDaysFromEpoch = Math.round((hYear - 1448) * 354.367 + (hMonth - 6) * 29.53 + (hDay - 18));
+      const anchor = new Date(Date.UTC(2026, 10, 28));
+      let low = addDaysUTC(anchor, approxDaysFromEpoch - 5);
+      let high = addDaysUTC(anchor, approxDaysFromEpoch + 5);
 
-      let l = jd + 68569;
-      const n = Math.floor((4 * l) / 146097);
-      l = l - Math.floor((146097 * n + 3) / 4);
-      const i = Math.floor((4000 * (l + 1)) / 1461001);
-      l = l - Math.floor((1461 * i) / 4) + 31;
-      const j = Math.floor((80 * l) / 2447);
-      const day = l - Math.floor((2447 * j) / 80);
-      l = Math.floor(j / 11);
-      const month = j + 2 - 12 * l;
-      const year = 100 * (n - 49) + i + l;
+      while (low <= high) {
+        const mid = addDaysUTC(low, Math.floor(diffDaysUTC(high, low) / 2));
+        const cmp = compareHijri(gregorianToHijriObj(mid), target);
+        if (cmp === 0) return mid;
+        if (cmp < 0) low = addDaysUTC(mid, 1);
+        else high = addDaysUTC(mid, -1);
+      }
 
-      return new Date(Date.UTC(year, month - 1, day));
+      // Fallback if target day exceeds month length (e.g., 30 in a 29-day month)
+      let probe = addDaysUTC(anchor, approxDaysFromEpoch);
+      for (let step = -3; step <= 3; step++) {
+        const candidate = addDaysUTC(probe, step);
+        const h = gregorianToHijriObj(candidate);
+        if (h.year === hYear && h.month === hMonth) return candidate;
+      }
+      return probe;
     }
 
     function hijriMonthLength(hYear, hMonth) {
@@ -556,7 +564,8 @@
       const nextMonth = hMonth === 12 ? 1 : hMonth + 1;
       const nextYear = hMonth === 12 ? hYear + 1 : hYear;
       const nextStart = hijriToGregorianUTC(nextYear, nextMonth, 1);
-      return diffDaysUTC(nextStart, start);
+      const len = diffDaysUTC(nextStart, start);
+      return len >= 29 && len <= 30 ? len : 30;
     }
 
     function gregorianToHijriMY(utcDate, offsetDays) {
@@ -594,12 +603,6 @@
       return [years, months, days];
     }
 
-    function compareHijri(a, b) {
-      if (a.year !== b.year) return a.year - b.year;
-      if (a.month !== b.month) return a.month - b.month;
-      return a.day - b.day;
-    }
-
     function diffYmdHijri(startH, endH) {
       if (compareHijri(endH, startH) < 0) return [0, 0, 0];
       let years = endH.year - startH.year;
@@ -625,7 +628,6 @@
       const months = lang === "BM" ? BULAN_MASIHI_BM : BULAN_MASIHI_EN;
       const base = `${utcDate.getUTCDate()} ${months[utcDate.getUTCMonth()]} ${utcDate.getUTCFullYear()}`;
       if (!includeDay) return base;
-      // getUTCDay(): 0 = Sunday .. 6 = Saturday; map to 0 = Monday .. 6 = Sunday
       const monIdx = (utcDate.getUTCDay() + 6) % 7;
       const dayName = lang === "BM" ? HARI_BM[monIdx] : HARI_EN[monIdx];
       return `${dayName}, ${base}`;
