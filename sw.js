@@ -1,4 +1,4 @@
-const CACHE_NAME = "hijri-age-calc-v1";
+const CACHE_NAME = "hijri-age-calc-v2";
 const ASSETS = [
   "./",
   "./index.html",
