@@ -52,7 +52,7 @@
     }
 
     .container {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
     }
 
@@ -115,12 +115,12 @@
 
     .sub-row {
       display: grid;
-      grid-template-columns: 1fr 1.4fr;
-      gap: 12px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
       align-items: end;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 680px) {
       .sub-row {
         grid-template-columns: 1fr;
       }
@@ -228,7 +228,7 @@
       white-space: pre-wrap;
       word-break: break-word;
       color: var(--text);
-      min-height: 260px;
+      min-height: 280px;
     }
 
     .footer-bar {
@@ -303,12 +303,21 @@
       <div class="sub-row">
         <div class="field-group">
           <label id="balighLbl" for="balighInput">Umur Baligh / Sasaran (Tahun Hijrah):</label>
-          <input type="number" id="balighInput" value="12" min="1" max="150" />
+          <input type="number" id="balighInput" value="15" min="1" max="150" />
         </div>
 
         <div class="field-group">
-          <label id="offsetLbl">Pelarasan Takwim Malaysia (Hari):</label>
-          <div class="seg-group" style="--seg-count: 3;" id="offsetSeg">
+          <label id="dobOffsetLbl">Pelarasan Tarikh Lahir (Hari):</label>
+          <div class="seg-group" style="--seg-count: 3;" id="dobOffsetSeg">
+            <button type="button" class="seg-btn" data-val="-1">-1</button>
+            <button type="button" class="seg-btn active" data-val="0">0</button>
+            <button type="button" class="seg-btn" data-val="1">+1</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label id="todayOffsetLbl">Pelarasan Tarikh Semasa (Hari):</label>
+          <div class="seg-group" style="--seg-count: 3;" id="todayOffsetSeg">
             <button type="button" class="seg-btn" data-val="-1">-1</button>
             <button type="button" class="seg-btn active" data-val="0">0</button>
             <button type="button" class="seg-btn" data-val="1">+1</button>
@@ -330,11 +339,19 @@
 
     <div class="footer-bar">
       <span id="pwaNote">Menu (⋮) → "Install app" / "Add to Home screen"</span>
-      <span class="status-pill" id="offlineBadge">Offline Ready</span>
+      <span class="status-pill" id="offlineBadge">Sedia Luar Talian</span>
     </div>
   </div>
 
   <script>
+    const HARI_BM = [
+      "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"
+    ];
+
+    const HARI_EN = [
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+    ];
+
     const BULAN_HIJRI_BM = [
       "Muharam", "Safar", "Rabiulawal", "Rabiulakhir",
       "Jamadilawal", "Jamadilakhir", "Rejab", "Syaaban",
@@ -399,7 +416,8 @@
         dobLabel: "Tarikh Lahir (Masihi):",
         yearPlaceholder: "Tahun (cth: 1990)",
         balighLabel: "Umur Baligh / Sasaran (Tahun Hijrah):",
-        offsetLabel: "Pelarasan Takwim Malaysia (Hari):",
+        dobOffsetLabel: "Pelarasan Tarikh Lahir (Hari):",
+        todayOffsetLabel: "Pelarasan Tarikh Semasa (Hari):",
         calcBtn: "Kira Sekarang",
         copyBtn: "Salin Hasil",
         copiedBtn: "Disalin ✓",
@@ -434,7 +452,8 @@
         dobLabel: "Date of Birth (Gregorian):",
         yearPlaceholder: "Year (e.g. 1990)",
         balighLabel: "Baligh (Puberty) / Target Age (Hijri Years):",
-        offsetLabel: "Malaysia Calendar Offset (Days):",
+        dobOffsetLabel: "Birth Date Offset (Days):",
+        todayOffsetLabel: "Current Date Offset (Days):",
         calcBtn: "Calculate Now",
         copyBtn: "Copy Result",
         copiedBtn: "Copied ✓",
@@ -602,9 +621,14 @@
       return [years, months, days];
     }
 
-    function formatMasihi(utcDate, lang) {
+    function formatMasihi(utcDate, lang, includeDay = false) {
       const months = lang === "BM" ? BULAN_MASIHI_BM : BULAN_MASIHI_EN;
-      return `${utcDate.getUTCDate()} ${months[utcDate.getUTCMonth()]} ${utcDate.getUTCFullYear()}`;
+      const base = `${utcDate.getUTCDate()} ${months[utcDate.getUTCMonth()]} ${utcDate.getUTCFullYear()}`;
+      if (!includeDay) return base;
+      // getUTCDay(): 0 = Sunday .. 6 = Saturday; map to 0 = Monday .. 6 = Sunday
+      const monIdx = (utcDate.getUTCDay() + 6) % 7;
+      const dayName = lang === "BM" ? HARI_BM[monIdx] : HARI_EN[monIdx];
+      return `${dayName}, ${base}`;
     }
 
     function formatHijri(h, lang) {
@@ -613,13 +637,22 @@
       return `${h.day} ${months[h.month - 1]} ${h.year}${suffix}`;
     }
 
+    function unitLabel(value, pluralLabel, singularEn, lang) {
+      if (lang === "EN" && value === 1) return singularEn;
+      return pluralLabel;
+    }
+
     function formatYmd(y, m, d, lang) {
       const t = UI_TEXT[lang];
-      return `${y} ${t.yearsUnit}, ${m} ${t.monthsUnit}, ${d} ${t.daysUnit}`;
+      const yUnit = unitLabel(y, t.yearsUnit, "year", lang);
+      const mUnit = unitLabel(m, t.monthsUnit, "month", lang);
+      const dUnit = unitLabel(d, t.daysUnit, "day", lang);
+      return `${y} ${yUnit}, ${m} ${mUnit}, ${d} ${dUnit}`;
     }
 
     let currentLang = "BM";
-    let currentOffset = 0;
+    let dobOffset = 0;
+    let todayOffset = 0;
     let copyTimer = null;
 
     const daySelect = document.getElementById("daySelect");
@@ -685,7 +718,8 @@
       document.getElementById("dobLbl").textContent = t.dobLabel;
       yearInput.placeholder = t.yearPlaceholder;
       document.getElementById("balighLbl").textContent = t.balighLabel;
-      document.getElementById("offsetLbl").textContent = t.offsetLabel;
+      document.getElementById("dobOffsetLbl").textContent = t.dobOffsetLabel;
+      document.getElementById("todayOffsetLbl").textContent = t.todayOffsetLabel;
       document.getElementById("pwaNote").textContent = t.pwaNote;
       document.getElementById("offlineBadge").textContent = t.offlineBadge;
       calcBtn.textContent = t.calcBtn;
@@ -701,7 +735,6 @@
       const month = monthIdx + 1;
       const year = parseInt(yearInput.value.trim(), 10);
       const balighAge = parseInt(balighInput.value.trim(), 10);
-      const offset = currentOffset;
 
       if (Number.isNaN(year) || Number.isNaN(balighAge) || year < 1 || balighAge <= 0) {
         resultBox.textContent = t.errInvalidInput;
@@ -726,14 +759,14 @@
         return;
       }
 
-      const dobH = gregorianToHijriMY(dobM, offset);
-      const todayH = gregorianToHijriMY(todayM, offset);
+      const dobH = gregorianToHijriMY(dobM, dobOffset);
+      const todayH = gregorianToHijriMY(todayM, todayOffset);
 
       const targetHYear = dobH.year + balighAge;
       const maxHDay = hijriMonthLength(targetHYear, dobH.month);
       const targetHDay = Math.min(dobH.day, maxHDay);
       const targetH = { year: targetHYear, month: dobH.month, day: targetHDay };
-      const targetM = hijriToGregorianMY(targetH.year, targetH.month, targetH.day, offset);
+      const targetM = hijriToGregorianMY(targetH.year, targetH.month, targetH.day, dobOffset);
 
       const ageM = diffYmdGregorian(dobM, todayM);
       const ageH = diffYmdHijri(dobH, todayH);
@@ -742,31 +775,32 @@
       const mukallafM = diffYmdGregorian(targetM, todayM);
       const totalDaysMukallaf = Math.max(0, diffDaysUTC(todayM, targetM));
 
-      const offsetSign = offset >= 0 ? `+${offset}` : `${offset}`;
-      const offsetStr = t.offsetNote.replace("{offset}", offsetSign);
+      const todayOffsetStr = t.offsetNote.replace("{offset}", todayOffset >= 0 ? `+${todayOffset}` : `${todayOffset}`);
+      const dobOffsetStr = t.offsetNote.replace("{offset}", dobOffset >= 0 ? `+${dobOffset}` : `${dobOffset}`);
 
       const lines = [
         t.secCurrent,
-        `  • ${t.gregorian.padEnd(10)}: ${formatMasihi(todayM, currentLang)}`,
-        `  • ${t.hijri.padEnd(10)}: ${formatHijri(todayH, currentLang)}  (${offsetStr})`,
-        "-".repeat(62),
+        `  • ${t.gregorian.padEnd(10)}: ${formatMasihi(todayM, currentLang, true)}`,
+        `  • ${t.hijri.padEnd(10)}: ${formatHijri(todayH, currentLang)}  (${todayOffsetStr})`,
+        "-".repeat(66),
         t.secDob,
-        `  • ${t.gregorian.padEnd(10)}: ${formatMasihi(dobM, currentLang)}`,
-        `  • ${t.hijri.padEnd(10)}: ${formatHijri(dobH, currentLang)}`,
-        "-".repeat(62),
+        `  • ${t.gregorian.padEnd(10)}: ${formatMasihi(dobM, currentLang, true)}`,
+        `  • ${t.hijri.padEnd(10)}: ${formatHijri(dobH, currentLang)}  (${dobOffsetStr})`,
+        "-".repeat(66),
         t.secAge,
         `  • ${t.gregorian.padEnd(10)}: ${formatYmd(ageM[0], ageM[1], ageM[2], currentLang)}`,
         `  • ${t.hijri.padEnd(10)}: ${formatYmd(ageH[0], ageH[1], ageH[2], currentLang)}`,
-        "-".repeat(62),
+        "-".repeat(66),
         t.secTarget.replace("{age}", balighAge),
-        `  • ${t.targetHijri.padEnd(14)}: ${formatHijri(targetH, currentLang)}`,
-        `  • ${t.targetGregorian.padEnd(14)}: ${formatMasihi(targetM, currentLang)}`
+        `  • ${t.targetHijri.padEnd(16)}: ${formatHijri(targetH, currentLang)}`,
+        `  • ${t.targetGregorian.padEnd(16)}: ${formatMasihi(targetM, currentLang, true)}`
       ];
 
       if (compareHijri(todayH, targetH) >= 0) {
+        const dUnit = unitLabel(totalDaysMukallaf, t.daysUnit, "day", currentLang);
         lines.push(`  • ${t.mukallafHijri.padEnd(32)}: ${formatYmd(mukallafH[0], mukallafH[1], mukallafH[2], currentLang)}`);
         lines.push(
-          `  • ${t.mukallafGregorian.padEnd(32)}: ${formatYmd(mukallafM[0], mukallafM[1], mukallafM[2], currentLang)} (${totalDaysMukallaf.toLocaleString()} ${t.daysUnit})`
+          `  • ${t.mukallafGregorian.padEnd(32)}: ${formatYmd(mukallafM[0], mukallafM[1], mukallafM[2], currentLang)} (${totalDaysMukallaf.toLocaleString()} ${dUnit})`
         );
       } else {
         const bakiHari = Math.max(0, diffDaysUTC(targetM, todayM));
@@ -795,11 +829,21 @@
       });
     });
 
-    document.querySelectorAll("#offsetSeg .seg-btn").forEach((btn) => {
+    document.querySelectorAll("#dobOffsetSeg .seg-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        currentOffset = parseInt(btn.dataset.val, 10);
-        document.querySelectorAll("#offsetSeg .seg-btn").forEach((b) => {
-          b.classList.toggle("active", parseInt(b.dataset.val, 10) === currentOffset);
+        dobOffset = parseInt(btn.dataset.val, 10);
+        document.querySelectorAll("#dobOffsetSeg .seg-btn").forEach((b) => {
+          b.classList.toggle("active", parseInt(b.dataset.val, 10) === dobOffset);
+        });
+        calculate();
+      });
+    });
+
+    document.querySelectorAll("#todayOffsetSeg .seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        todayOffset = parseInt(btn.dataset.val, 10);
+        document.querySelectorAll("#todayOffsetSeg .seg-btn").forEach((b) => {
+          b.classList.toggle("active", parseInt(b.dataset.val, 10) === todayOffset);
         });
         calculate();
       });
